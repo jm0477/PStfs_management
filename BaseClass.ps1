@@ -26,9 +26,12 @@ function New-TFSconnection([string]$tfsUrl)
 # Function will re-format the metadata from TFS, and return a ticket list
 function Format-TFSdata($ParentWorkItems)
 {
+    [int]$i=0
     $result= New-Object 'System.Collections.Generic.List[psobject]'
     foreach($p in $ParentWorkItems)
     {
+        $i+=1
+        Write-Progress -Activity "Querying from TFS2 CM system..." -Status "Completed%" -PercentComplete ($i/$ParentWorkItems.count * 100)
         $items=$p.Fields
         if($p.links.linktypeend.name -ne 'Parent')
         {
@@ -38,12 +41,11 @@ function Format-TFSdata($ParentWorkItems)
                 $o | add-member -Name $item.name -Type NoteProperty -Value $item.Value
             }
             $result.Add($o)
-        } 
+        }
+        
     }
     return $result
 }
-
-
 
 
 Function Format-Datetime($time)

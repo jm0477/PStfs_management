@@ -51,11 +51,13 @@ $connection.Open()
 
 #Construct the TFS data into SQL querycommand
 $formated_data = Format-TFSdata -ParentWorkItems $ParentItems
-$insert=""
 
+[int]$success=0
+[int]$errors =0
+[int]$i=0
 ForEach($x in $formated_data)
 {
-
+    $insert=""
     [system.string]$T_id = $x.Id
     [system.string]$T_title = Replace-SingleQuote -text $x.Title
     [system.string]$T_Description = Format-Justification -T_Justification $x.'Description - 21ViaNet OE Project Change Management System'
@@ -73,17 +75,24 @@ ForEach($x in $formated_data)
     [system.string]$T_ActualEnd = Format-Datetime -time $x.'Actual End Date'
     [system.string]$T_Attachment  = '"' + $x.'Attached File Count' +'"'
     [system.string]$T_History  = Replace-SingleQuote -text $x.History
+    [system.string]$T_Status = Replace-SingleQuote -text $x.Status
 
-    $insert+= "INSERT INTO Ticket_RFC(T_id,T_title,T_Description,T_Justification,T_PreDeployment,T_PostDeployment,T_RollbackPlan,T_SuccessCriteria,T_DeploymentMechanism,T_PotentialImp,T_ExpectedImp,T_ScheduledStart,T_ScheduledEnd,T_ActualStart,T_ActualEnd,T_Attachment,T_History) VALUES($T_id,$T_title,$T_Description,$T_Justification,$T_PreDeployment,$T_PostDeployment,$T_RollbackPlan,$T_SuccessCriteria,$T_DeploymentMechanism,$T_PotentialImp,$T_ExpectedImp,$T_ScheduledStart,$T_ScheduledEnd,$T_ActualStart,$T_ActualEnd,$T_Attachment,$T_History);"
+    $insert= "INSERT INTO Ticket_RFC(T_id,T_title,T_Description,T_Justification,T_PreDeployment,T_PostDeployment,T_RollbackPlan,T_SuccessCriteria,T_DeploymentMechanism,T_PotentialImp,T_ExpectedImp,T_ScheduledStart,T_ScheduledEnd,T_ActualStart,T_ActualEnd,T_Attachment,T_History,T_Status) VALUES($T_id,$T_title,$T_Description,$T_Justification,$T_PreDeployment,$T_PostDeployment,$T_RollbackPlan,$T_SuccessCriteria,$T_DeploymentMechanism,$T_PotentialImp,$T_ExpectedImp,$T_ScheduledStart,$T_ScheduledEnd,$T_ActualStart,$T_ActualEnd,$T_Attachment,$T_History,$T_Status);"
+    $insertcommand = new-object MySql.Data.MySqlClient.MySqlCommand
+    $insertcommand.Connection = $connection
+    $insertcommand.CommandText = $insert
+    
+    $i+=1
+   Write-Progress -Activity "Inserting into MySQL Database..." -Status "Progress:" -PercentComplete ($i/$formated_data.count*100) -Completed
+    if($insertcommand.ExecuteNonQuery() -eq 1)
+    {
+        $success+=1    
+    }
+    else
+    {
+        $errors+=1
+    }
+    $insertcommand.Dispose()
 }
-
-#call mysql object, and insert into Mysql database
-$insertcommand = new-object MySql.Data.MySqlClient.MySqlCommand
-$insertcommand.Connection = $connection
-$insertcommand.CommandText = $insert
-$insertcommand.ExecuteNonQuery()
-
-#===============================================================================
-# trying to get more properties of the customized objects
-
-$single = $ParentItems[0]
+$sum = $success + $errors
+write-host $sum "completed in total" $success "success" $errors "Failed"
